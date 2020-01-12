@@ -60,20 +60,28 @@ In this example: \
 ### config.ini
 Contains the configuration for the accessing the Jamf API, email, etc
 
-Optional keys:
+All keys:
 ```
+[jamf]
+    url (required)
+    user (required)
+    pass (required)
+
 [email]
-    port
-    user
-    pass
+    url (required)
+    port (optional)
+    user (optional)
+    pass (optional)
 
 [message]
-    subject
+    name (required)
+    email (required)
+    subject (optional)
 
 [git]
-    name
-    email
-    repo
+    name (optional)
+    email (optional)
+    repo (optional)
 
 
 ```
