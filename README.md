@@ -1,7 +1,7 @@
 # Jamf Change Monitor
 **__jamf_change_monitor.py__**
 
-##Be notified of changes when they happen and be able to revert
+## Be notified of changes when they happen and be able to revert
 1. Be notified of changes before it's too late
 2. Be able to revert changes buy re-uploading old configurations
 3. Be able to easily go through change history
