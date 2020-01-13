@@ -1,7 +1,7 @@
 # Jamf Change Monitor
 **__jamf_change_monitor.py__**
 
-##Be notified of changes when they happen and be able to revert
+## Be notified of changes when they happen and be able to revert
 1. Be notified of changes before it's too late
 2. Be able to revert changes buy re-uploading old configurations
 3. Be able to easily go through change history
@@ -60,20 +60,28 @@ In this example: \
 ### config.ini
 Contains the configuration for the accessing the Jamf API, email, etc
 
-Optional keys:
+All keys:
 ```
+[jamf]
+    url (required)
+    user (required)
+    pass (required)
+
 [email]
-    port
-    user
-    pass
+    url (required)
+    port (optional)
+    user (optional)
+    pass (optional)
 
 [message]
-    subject
+    name (required)
+    email (required)
+    subject (optional)
 
 [git]
-    name
-    email
-    repo
+    name (optional)
+    email (optional)
+    repo (optional)
 
 
 ```
