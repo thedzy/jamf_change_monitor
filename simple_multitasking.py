@@ -70,4 +70,3 @@ class ThreadFunction(Thread):
         """
         return self._is_handled
 
-print('Not intendedt o run on independantly')
