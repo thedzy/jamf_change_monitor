@@ -480,6 +480,3 @@ class JamfUAPI:
             return APIResponse(True, url=request_url, http_code=request.status_code)
         else:
             return APIResponse(False, url=request_url, http_code=request.status_code)
-
-
-print('Not intendedt o run on independantly')
