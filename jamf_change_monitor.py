@@ -122,7 +122,6 @@ def main(test_module, config_file):
     hours, minutes = divmod(minutes, 60)
     logging.info('Total runtime: {0:.0f}:{1:.0f}:{2:.3f}'.format(hours, minutes, seconds))
 
-    exit()
     if repo.is_dirty():
         # Make all git commits
         git_commit(logs, repo)
