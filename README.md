@@ -7,7 +7,7 @@
 3. Be able to easily go through change history
 4. Be able to search through Jamf content in more detail including history
 
-#How it works:
+# How it works:
 1. Each module in the modules folder is run simultaneously
 2. Each module downloads data from the API into a git repository
 3. Each file is committed and or removed
