@@ -31,5 +31,4 @@ def runtime_message(start_time, path):
     return 'Total runtime for {3}: {0:.0f}:{1:.0f}:{2:.3f}'.format(hours, minutes, seconds, path)
 
 
-print('Not intendedt o run on independantly')
 
