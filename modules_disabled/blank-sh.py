@@ -19,12 +19,11 @@ import logging
 import subprocess
 import time
 
-import modules_common
+from modules_common import timer
 
 
+@timer(__file__)
 def get(api_classic=None, api_universal=None):
-    start_time = time.time()
-
     log = []
 
     # Here is an example of using shell code to get the data
@@ -44,12 +43,9 @@ def get(api_classic=None, api_universal=None):
         print(processinfo.stdout)
         lines = processinfo.stdout.split('\n')
         for line in lines:
-            item = tupple(line.split(','))
+            item = tuple(line.split(','))
             if len(item) == 4:
                 log.append(item)
-
-    # Display run time
-    logging.info(modules_common.runtime_message(start_time, path))
 
     return log
 

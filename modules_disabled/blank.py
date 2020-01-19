@@ -18,18 +18,14 @@ __status__ = 'Development'
 import logging
 import time
 
-import modules_common
+from modules_common import timer
 
 
+@timer(__file__)
 def get(api_classic=None, api_universal=None):
-    start_time = time.time()
-
     log = []
 
     # As long as the content is downloaded and the log returned contains the list of tuples of changes, this can be modeled any way
-
-    # Display run time
-    logging.info(modules_common.runtime_message(start_time, path))
 
     return log
 
