@@ -15,11 +15,13 @@ __maintainer__ = 'thedzy'
 __email__ = 'thedzy@hotmail.com'
 __status__ = 'Development'
 
+import collections
 import importlib
 import logging
 import optparse
 import os
 import smtplib
+import time
 from configparser import ConfigParser
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
@@ -34,7 +36,7 @@ from simple_multitasking import *
 def main(test_module, config_file):
     start_time = time.time()
 
-    logs = []
+    logs = collections.deque()
 
     # Paths
     base_path = os.path.dirname(os.path.abspath(__file__))
@@ -116,13 +118,20 @@ def main(test_module, config_file):
             logs.extend(return_log)
         unhandled_threads = [t for t in threads if not t.is_handled()]
 
+    # If we are testing one display the output fro verification
+    if test_module is not None:
+        print('Module logs:')
+        for log in logs:
+            print(str(log))
+
     # print end/total time
     runtime = (time.time() - start_time)
     minutes, seconds = divmod(runtime, 60)
     hours, minutes = divmod(minutes, 60)
-    logging.info('Total runtime: {0:.0f}:{1:.0f}:{2:.3f}'.format(hours, minutes, seconds))
+    logging.info('Total runtime for all modules: {0:.0f}:{1:.0f}:{2:.3f}'.format(hours, minutes, seconds))
 
     if repo.is_dirty():
+        logging.info('Starting git commit attempt')
         # Make all git commits
         git_commit(logs, repo)
 
