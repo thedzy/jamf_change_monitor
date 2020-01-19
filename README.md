@@ -1,12 +1,12 @@
 # Jamf Change Monitor
 **__jamf_change_monitor.py__**
 
-##Be notified of changes when they happen and be able to revert
+## Be notified of changes when they happen and be able to revert
 1. Be notified of changes before it's too late
 2. Be able to revert changes buy re-uploading old configurations
 3. Be able to easily go through change history
 
-#How it works:
+# How it works:
 1. Each module in the modules folder is run simultaneously
 2. Each module downloads data from the API into a git repository
 3. Each file is committed and or removed
