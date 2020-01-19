@@ -18,11 +18,12 @@ __status__ = 'Development'
 import json
 import logging
 import os
-import time
-
-import modules_common
 
 
+from modules_common import timer
+
+
+@timer(__file__)
 def get(api_classic=None, api_universal=None):
     """
     Get data from the API
@@ -30,8 +31,6 @@ def get(api_classic=None, api_universal=None):
     :param api_universal: (JamfUAPI)
     :return: (list)(tuples)
     """
-    start_time = time.time()
-
     log = []
 
     # Sort keys?
@@ -46,8 +45,6 @@ def get(api_classic=None, api_universal=None):
     api_query = api_classic.get_data('computerinventorycollection')
 
     if api_query.success:
-        logging.info('Starting {}'.format(path))
-
         name = path
         json_file_path = '{0}/{1}.json'.format(path, 'data')
 
@@ -58,9 +55,6 @@ def get(api_classic=None, api_universal=None):
         logging.info('Completed {}'.format(path))
     else:
         logging.info('Failed to retrieve: {}'.format(path))
-
-    # Display run time
-    logging.info(modules_common.runtime_message(start_time, path))
 
     return log
 
