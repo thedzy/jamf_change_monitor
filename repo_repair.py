@@ -54,7 +54,7 @@ def main(config_file, repo_path):
                 accept = False
                 break
 
-        if answer == 'y':
+        if accept == 'y':
             os.chdir(repo_path)
 
             git_folder = os.path.join(repo_path, '.git')
