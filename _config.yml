@@ -1,3 +1,4 @@
 theme: jekyll-theme-midnight
 title: Jamf Change Monitor
 description: Be notified of changes when they happen and be able to revert
+google_analytics: UA-88051787-1
