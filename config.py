@@ -15,23 +15,24 @@ __maintainer__ = 'thedzy'
 __email__ = 'thedzy@hotmail.com'
 __status__ = 'Development'
 
-import os
-import optparse
+__description__ = """
+create a configurtation file for jamf_change_monitor
+"""
+
+import argparse
 from configparser import ConfigParser
+from pathlib import Path
 
 
-def main(config_file):
-
-    base_path = os.path.dirname(os.path.abspath(__file__))
-
-    os.chdir(base_path)
+def main():
+    file_path = Path(__file__)
+    base_path = file_path.parent
 
     # Create configuration
     config = ConfigParser()
-    if config_file is None:
-        config_file = os.path.join(base_path, 'config.ini')
+    config_file = options.config_file if options.config_file else base_path.joinpath('config.ini')
 
-    if os.path.exists(config_file):
+    if Path(config_file).exists():
         config.read(config_file)
     else:
         # Set defaults
@@ -97,7 +98,7 @@ def main(config_file):
 
 def get_option(section, key, prompt, config, optional=False):
     """
-    Get the value for the valuee for the key
+    Get the value for the value for the key
     :param section: (str) Config section
     :param key: (str) Section key
     :param prompt: (str) Prompt/Question
@@ -160,15 +161,12 @@ def verify_answers(config):
 
 
 if __name__ == '__main__':
-    parser = optparse.OptionParser('%prog [options]\n %prog create a configurtation file for jamf_change_monitor',
-                                   version='%prog 1.0')
+    parser = argparse.ArgumentParser(__description__)
 
     # Specify the location of the configuration file
-    parser.add_option('-c', '--config',
-                      action='store', dest='config_file', default=None,
-                      help='Specify an an alternate file for the configuration')
+    parser.add_argument('-c', '--config', default=None,
+                        action='store', dest='config_file',
+                        help='Specify an an alternate file for the configuration')
 
-    options, args = parser.parse_args()
-    main(options.config_file)
-
-
+    options = parser.parse_args()
+    main()
