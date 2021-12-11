@@ -16,34 +16,33 @@ __email__ = 'thedzy@hotmail.com'
 __status__ = 'Development'
 
 import logging
-import os
 import time
+from pathlib import Path
 
 
-def timer(script_file=None):
+def timer(module_file=None):
     def timer_wrapper(func):
         def timer_func(*args, **kwargs):
             # Get the start time
             start_time = time.time()
 
-            if script_file is None:
+            if module_file is None:
                 module = 'undefined'
             else:
-                module = os.path.basename(script_file).split('.')[0]
+                module = Path(module_file).stem
 
-            logging.info('Starting {}'.format(module))
+            logging.info(f'Starting {module}')
 
             # Run function
             result = func(*args, **kwargs)
 
-            # Print timeer
+            # Print timer
             minutes, seconds = divmod(time.time() - start_time, 60)
             hours, minutes = divmod(minutes, 60)
-            logging.info('Total runtime for {3}: {0:.0f}:{1:.0f}:{2:.3f}'.format(hours, minutes, seconds, module))
+            logging.info(f'Total runtime for {module}: {hours:.0f}:{minutes:.0f}:{seconds:.3f}')
 
             return result
 
         return timer_func
 
     return timer_wrapper
-
