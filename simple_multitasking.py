@@ -69,4 +69,3 @@ class ThreadFunction(Thread):
         :return: (bool)
         """
         return self._is_handled
-
