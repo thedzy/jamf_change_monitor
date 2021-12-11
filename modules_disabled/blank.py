@@ -15,17 +15,42 @@ __maintainer__ = 'thedzy'
 __email__ = 'thedzy@hotmail.com'
 __status__ = 'Development'
 
+import json
 import logging
-import time
+import re
+from pathlib import Path
 
-from modules_common import timer
+import modules_common
 
 
-@timer(__file__)
-def get(api_classic=None, api_universal=None):
-    log = []
+@modules_common.timer(__file__)
+def get(api_classic=None, api_universal=None, repo_path=None):
+    """
+    Get data from the API
+    :param api_classic: (JamfClassic)
+    :param api_universal: (JamfUAPI)
+    :param repo_path: (Path) Repo path
+    :return: (list)(tuples)
+    """
+    module = Path(__file__).stem
+    log = {
+        module: {
+            'diff': [],
+            'add': [],
+            'remove': []
+        }
+    }
+    module_path = repo_path.joinpath(module)
 
-    # As long as the content is downloaded and the log returned contains the list of tuples of changes, this can be modeled any way
+    # As long as the content is downloaded and the log returned contains the dicts of adds, changes and deletes
+    # Example
+    log[module]['diff'].append(
+        {
+            'name': 'Name of item',
+            'id': 13,
+            'file': module_path.joinpath('file').as_posix()
+        }
+    )
 
     return log
 
