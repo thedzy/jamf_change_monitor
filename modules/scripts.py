@@ -15,73 +15,124 @@ __maintainer__ = 'thedzy'
 __email__ = 'thedzy@hotmail.com'
 __status__ = 'Development'
 
+import difflib
 import json
 import logging
-import os
+import re
+from pathlib import Path
+
+import modules_common
 
 
-from modules_common import timer
-
-
-@timer(__file__)
-def get(api_classic=None, api_universal=None):
+@modules_common.timer(__file__)
+def get(api_classic=None, api_universal=None, repo_path=None):
     """
     Get data from the API
     :param api_classic: (JamfClassic)
     :param api_universal: (JamfUAPI)
+    :param repo_path: (Path) Repo path
     :return: (list)(tuples)
     """
-    log = []
+    module = Path(__file__).stem
+    log = {
+        module: {
+            'diff': [],
+            'add': [],
+            'remove': []
+        }
+    }
+    module_path = repo_path.joinpath(module)
 
     # Sort keys?
-    sort_keys = True
-
-    # complimentary file extension
-    alt_file_ext = '.command'
+    sort_keys = False
 
     # Create folders if it does not exist
-    path = 'scripts'
-    if not os.path.exists(path):
-        os.makedirs(path, exist_ok=True)
-        log.append((path, path, 'init', 3,))
+    if not module_path.exists():
+        module_path.mkdir(exist_ok=True)
 
-    api_query = api_classic.get_data('scripts')
+    # Query api
+    scripts = []
+    remainder, page, size = 1, 0, 100
+    while remainder > 0:
+        api_query = api_universal.get_data('v1', 'scripts', page=page, size=size, sort='id:desc')
+        logging.debug(f'Query {api_query.data}')
+        remainder = (api_query.data['totalCount'] / size) - page
+        scripts.extend(api_query.data['results'])
+        page += 1
 
     if api_query.success:
-        for file in os.listdir(path):
-            if not any(data_object['id'] == int(os.path.splitext(file)[0]) for data_object in api_query.data['scripts']):
-                saved_file_path = '{0}/{1}'.format(path, file)
-                if not file.endswith(alt_file_ext):
-                    alt_file_path = saved_file_path.split('.')[0] + alt_file_ext
-                    with open(saved_file_path, 'r') as saved_file:
-                        name = get_name(json.load(saved_file))
-                    log.append((saved_file_path, path, name, 1,))
-                    log.append((alt_file_path, path, name, 1,))
+        # Remove files
+        for file in module_path.iterdir():
+            if re.match(r'^\d+', file.name):
+                if all(False for script in scripts if int(script['id']) == int(file.stem)):
+                    with open(file, 'r') as saved_file:
+                        try:
+                            name = get_name(json.load(saved_file))
+                        except json.decoder.JSONDecodeError:
+                            name = file.stem
+                    log[module]['remove'].append({
+                        'name': name,
+                        'id': file.stem,
+                        'file': file.as_posix()
+                    })
 
-                    if not os.remove(saved_file_path):
-                        logging.info('{0}: {1} File failed to be removed'.format(path, file))
-                    if not os.remove(alt_file_path):
-                        logging.info('{0}: {1} File failed to be removed'.format(path, file))
+        # Save new/changed data
+        for data_object in scripts:
+            name = get_name(data_object)
+            file_path = module_path.joinpath(str(data_object['id']))
 
-        for data_object in api_query.data['scripts']:
-            object_query = api_classic.get_data('scripts', 'id', data_object['id'])
-            if object_query.success:
-                name = get_name(object_query.data)
-                json_file_path = '{0}/{1}.json'.format(path, data_object['id'])
+            new_script = data_object['scriptContents']
+            del data_object['scriptContents']
+            new_data = json.dumps(clean_data(data_object), indent=4, sort_keys=sort_keys)
 
-                with open(json_file_path, 'w') as file:
-                    file.write(json.dumps(clean_data(object_query.data), indent=4, sort_keys=sort_keys))
-                log.append((json_file_path, path, name, 0,))
+            # Data
+            if Path(file_path).with_suffix('.data').exists():
+                with open(file_path.with_suffix('.data'), 'r+') as file:
+                    old_data = file.read()
+                    if old_data != new_data:
+                        file.seek(0)
+                        file.truncate()
+                        file.write(new_data)
+                        log[module]['diff'].append({
+                            'name': name,
+                            'id': data_object['id'],
+                            'file': file_path.with_suffix('.data').as_posix()
+                        })
+            else:
+                with open(file_path.with_suffix('.data'), 'w') as file:
+                    file.write(json.dumps(clean_data(data_object), indent=4, sort_keys=sort_keys))
+                    log[module]['add'].append({
+                        'name': name,
+                        'id': data_object["id"],
+                        'file': file_path.with_suffix('.data').as_posix()
+                    })
 
-                data_file_path = '{0}/{1}{2}'.format(path, data_object['id'], alt_file_ext)
+            # Script
+            if Path(file_path).with_suffix('.script').exists():
+                with open(file_path.with_suffix('.script'), 'r+') as file:
+                    old_script = file.read()
+                    diff = list(difflib.context_diff(old_script.splitlines(), new_script.splitlines()))
+                    if len(diff) > 0:
+                        file.seek(0)
+                        file.truncate()
+                        file.write(new_script)
+                        log[module]['diff'].append({
+                            'name': name,
+                            'id': data_object['id'],
+                            'file': file_path.with_suffix('.script').as_posix()
+                        })
+            else:
+                with open(file_path.with_suffix('.script'), 'w') as file:
+                    file.write(new_script)
+                    log[module]['add'].append({
+                        'name': name,
+                        'id': data_object["id"],
+                        'file': file_path.with_suffix('.script').as_posix()
+                    })
 
-                with open(data_file_path, 'w') as file:
-                    file.write(object_query.data['script']['script_contents'])
-                log.append((data_file_path, path, name, 0,))
-
-        logging.info('Completed {}'.format(path))
+        logging.info('Completed {}'.format(module))
     else:
-        logging.info('Failed to retrieve: {}'.format(path))
+        logging.info('Failed to retrieve: {}'.format(module))
 
     return log
 
@@ -93,9 +144,6 @@ def clean_data(json_data):
     :return: (dict) cleansed json/dict
     """
 
-    # remove the encoded version of the script
-    del (json_data['script']['script_contents_encoded'])
-
     return json_data
 
 
@@ -106,6 +154,6 @@ def get_name(json_data):
     :return: (str) User friendly name
     """
 
-    name = json_data['script']['name']
+    name = json_data['name']
 
     return name

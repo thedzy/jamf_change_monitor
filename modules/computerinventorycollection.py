@@ -17,44 +17,71 @@ __status__ = 'Development'
 
 import json
 import logging
-import os
+from pathlib import Path
+
+import modules_common
 
 
-from modules_common import timer
-
-
-@timer(__file__)
-def get(api_classic=None, api_universal=None):
+@modules_common.timer(__file__)
+def get(api_classic=None, api_universal=None, repo_path=None):
     """
     Get data from the API
     :param api_classic: (JamfClassic)
     :param api_universal: (JamfUAPI)
+    :param repo_path: (Path) Repo path
     :return: (list)(tuples)
     """
-    log = []
+    module = Path(__file__).stem
+    log = {
+        module: {
+            'diff': [],
+            'add': [],
+            'remove': []
+        }
+    }
+    module_path = repo_path.joinpath(module)
 
     # Sort keys?
     sort_keys = True
 
     # Create folders if it does not exist
-    path = 'computerinventorycollection'
-    if not os.path.exists(path):
-        os.makedirs(path, exist_ok=True)
-        log.append((path, path, 'init', 3,))
+    if not module_path.exists():
+        module_path.mkdir(exist_ok=True)
 
+    # Query api
     api_query = api_classic.get_data('computerinventorycollection')
+    logging.debug(f'Query: {api_query.data}')
 
     if api_query.success:
-        name = path
-        json_file_path = '{0}/{1}.json'.format(path, 'data')
+        # Single file
+        file_path = module_path.joinpath('data')
 
-        with open(json_file_path, 'w') as file:
-            file.write(json.dumps(clean_data(api_query.data), indent=4, sort_keys=sort_keys))
-        log.append((json_file_path, path, name, 0,))
+        # Save new/changed data
+        if file_path.exists():
+            with open(file_path, 'r+') as file:
+                old_data = file.read()
+                new_data = json.dumps(clean_data(api_query.data), indent=4, sort_keys=sort_keys)
+                if old_data != new_data:
+                    file.seek(0)
+                    file.truncate()
+                    file.write(new_data)
+                    log[module]['diff'].append({
+                        'name': module,
+                        'id': 0,
+                        'file': file_path.as_posix()
+                    })
 
-        logging.info('Completed {}'.format(path))
+            logging.info(f'Completed {module}')
+        else:
+            with open(file_path, 'w') as file:
+                file.write(json.dumps(clean_data(api_query.data), indent=4, sort_keys=sort_keys))
+                log[module]['add'].append({
+                    'name': module,
+                    'id': 0,
+                    'file': file_path.as_posix()
+                })
     else:
-        logging.info('Failed to retrieve: {}'.format(path))
+        logging.error('Failed to retrieve: {}'.format(module))
 
     return log
 

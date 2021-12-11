@@ -5,7 +5,7 @@ Script:	ldapservers.py
 Date:	2020-01-10
 Platform: macOS/Linux
 Description:
-Retrieves and processes /JSSResource/ldapservers
+Retrieves and processes /ldap/servers
 """
 __author__ = 'thedzy'
 __copyright__ = 'Copyright 2020, thedzy'
@@ -17,57 +17,87 @@ __status__ = 'Development'
 
 import json
 import logging
-import os
+import re
+from pathlib import Path
+
+import modules_common
 
 
-from modules_common import timer
-
-
-@timer(__file__)
-def get(api_classic=None, api_universal=None):
+@modules_common.timer(__file__)
+def get(api_classic=None, api_universal=None, repo_path=None):
     """
     Get data from the API
     :param api_classic: (JamfClassic)
     :param api_universal: (JamfUAPI)
+    :param repo_path: (Path) Repo path
     :return: (list)(tuples)
     """
-    log = []
+    module = Path(__file__).stem
+    log = {
+        module: {
+            'diff': [],
+            'add': [],
+            'remove': []
+        }
+    }
+    module_path = repo_path.joinpath(module)
 
     # Sort keys?
-    sort_keys = True
+    sort_keys = False
 
     # Create folders if it does not exist
-    path = 'ldapservers'
-    if not os.path.exists(path):
-        os.makedirs(path, exist_ok=True)
-        log.append((path, path, 'init', 3,))
+    if not module_path.exists():
+        module_path.mkdir(exist_ok=True)
 
-    api_query = api_classic.get_data('ldapservers')
+    # Query api
+    api_query = api_universal.get_data('ldap', 'servers', sort='id:asc')
+    logging.debug(f'Query {api_query.data}')
+    data_objects = api_query.data
+
 
     if api_query.success:
-        for file in os.listdir(path):
-            if not any(data_object['id'] == int(os.path.splitext(file)[0]) for data_object in api_query.data['ldap_servers']):
-                saved_file_path = '{0}/{1}'.format(path, file)
-                with open(saved_file_path, 'r') as saved_file:
-                    name = get_name(json.load(saved_file))
-                log.append((saved_file_path, path, name, 1,))
+        # Remove files
+        for file in module_path.iterdir():
+            if re.match(r'\d+', file.name):
+                if all([False for data_object in data_objects if int(data_object['id']) == int(file.stem)]):
+                    with open(file, 'r') as saved_file:
+                        name = get_name(json.load(saved_file))
+                    log[module]['remove'].append({
+                        'name': name,
+                        'id': file.stem,
+                        'file': file.as_posix()
+                    })
 
-                if not os.remove(saved_file_path):
-                    logging.info('{0}: {1} File failed to be removed'.format(path, file))
+        # Save new/changed data
+        for data_object in data_objects:
+            name = get_name(data_object)
+            file_path = module_path.joinpath(str(data_object['id']))
 
-        for data_object in api_query.data['ldap_servers']:
-            object_query = api_classic.get_data('ldapservers', 'id', data_object['id'])
-            if object_query.success:
-                name = get_name(object_query.data)
-                json_file_path = '{0}/{1}.json'.format(path, data_object['id'])
+            if Path(file_path).exists():
+                with open(file_path, 'r+') as file:
+                    old_data = file.read()
+                    new_data = json.dumps(clean_data(data_object), indent=4, sort_keys=sort_keys)
+                    if old_data != new_data:
+                        file.seek(0)
+                        file.truncate()
+                        file.write(new_data)
+                        log[module]['diff'].append({
+                            'name': name,
+                            'id': data_object['id'],
+                            'file': file_path.as_posix()
+                        })
+            else:
+                with open(file_path, 'w') as file:
+                    file.write(json.dumps(clean_data(data_object), indent=4, sort_keys=sort_keys))
+                    log[module]['add'].append({
+                        'name': name,
+                        'id': data_object["id"],
+                        'file': file_path.as_posix()
+                    })
 
-                with open(json_file_path, 'w') as file:
-                    file.write(json.dumps(clean_data(object_query.data), indent=4, sort_keys=sort_keys))
-                log.append((json_file_path, path, name, 0,))
-
-        logging.info('Completed {}'.format(path))
+        logging.info('Completed {}'.format(module))
     else:
-        logging.info('Failed to retrieve: {}'.format(path))
+        logging.error('Failed to retrieve: {}'.format(module))
 
     return log
 
@@ -89,6 +119,6 @@ def get_name(json_data):
     :return: (str) User friendly name
     """
 
-    name = json_data['ldap_server']['connection']['name']
+    name = json_data['name']
 
     return name

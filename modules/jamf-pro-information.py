@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
 """
-Script:	cache-settings.py
+Script:	jamf-pro-information.py
 Date:	2021-12-07
 Platform: macOS/Linux
 Description:
-Retrieves and processes /v1/cache-settings
+Retrieves and processes /v1/jamf-pro-information
 """
 __author__ = 'thedzy'
 __copyright__ = 'Copyright 2020, thedzy'
@@ -49,7 +49,7 @@ def get(api_classic=None, api_universal=None, repo_path=None):
         module_path.mkdir(exist_ok=True)
 
     # Query api
-    api_query = api_universal.get_data('v1', 'cache-settings')
+    api_query = api_universal.get_data('v1', 'jamf-pro-information')
     logging.debug(f'Query: {api_query.data}')
 
     if api_query.success:
