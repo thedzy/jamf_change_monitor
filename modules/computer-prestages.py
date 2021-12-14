@@ -109,6 +109,8 @@ def clean_data(json_data):
     :return: (dict) cleansed json/dict
     """
 
+    del json_data['versionLock']
+
     return json_data
 
 
