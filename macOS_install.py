@@ -4,7 +4,7 @@
 Script:	macOS_install.py
 Date:	2021-12-11	
 
-Platform: macOS/Windows/Linux
+Platform: macOS
 
 Description:
 
