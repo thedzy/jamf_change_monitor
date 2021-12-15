@@ -301,13 +301,29 @@ def cron_gen(minute, hour, day, month, weekday):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(__description__)
+    def parser_formatter(format_class, **kwargs):
+        """
+        Use a raw parser to use line breaks, etc
+        :param format_class: (class) formatting class
+        :param kwargs: (dict) kwargs for class
+        :return: (class) formatting class
+        """
+        try:
+            return lambda prog: format_class(prog, **kwargs)
+        except TypeError:
+            return format_class
+
+
+    parser = argparse.ArgumentParser(__description__,
+                                     formatter_class=parser_formatter(
+                                         argparse.RawTextHelpFormatter,
+                                         indent_increment=4, max_help_position=12, width=160))
 
     # debug a module
     parser.add_argument('-l', '--location', default='/usr/local/jamf_change_monitor',
                         action='store', dest='location',
                         help='install location\n'
-                             'Default: %(default)s')
+                             'default: %(default)s')
 
     parser.add_argument('-f', '--force',
                         action='store_true', dest='force',
@@ -316,30 +332,29 @@ if __name__ == '__main__':
     interval = parser.add_mutually_exclusive_group()
     interval.add_argument('--hourly',
                           action='store_true', dest='hourly',
-                          help='run monitor each hour')
+                          help='run monitor once each hour')
     interval.add_argument('--daily',
                           action='store_true', dest='daily',
-                          help='run monitor each day')
+                          help='run monitor once each day')
     interval.add_argument('--weekly',
                           action='store_true', dest='weekly',
-                          help='run monitor each week')
+                          help='run monitor once each week')
     interval.add_argument('--cron', default=None,
                           action='store', dest='cron',
-                          help='use cron style syntax (no @syntax) '
-                               'ex: 0 * * * 1,2,3,4,5,6 = Every hour on weekdays'
-                               'ex: 0 7-18 * * monday-friday = Every hour on weekdays during working hours'
-                               'ex: */20 * * * * = Every 20 minutes of every days'
-
-                          )
+                          help='use cron style syntax (no @syntax) \n'
+                               'ex: 0 * * * 1,2,3,4,5,6       Every hour on weekdays\n'
+                               'ex: 0 7-18 * * monday-friday  Every hour on weekdays during working hours\n'
+                               'ex: */20 * * * *              Every 20 minutes of every day\n')
     interval.add_argument('--continuous',
                           action='store_true', dest='continuous',
-                          help='run monitor immediately after completing')
+                          help='runs monitor immediately after completing')
 
     # Specify the location of the configuration file
     parser.add_argument('-c', '--config', default=Path(Path(__file__).parent).joinpath('config.ini'),
                         action='store', dest='config_file',
                         required=True,
-                        help='Specify an an alternate file for the configuration')
+                        help='specify the permanent file location for the configuration\n'
+                             'the file will not be moved')
 
     parser.add_argument('--debug', const=10, default=20,
                         action='store_const', dest='debug',
