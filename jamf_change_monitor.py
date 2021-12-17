@@ -232,9 +232,9 @@ def main():
     # Load all modules into memory
     data_functions = []
     for module in modules_path.glob('*.py'):
-        if re.match(r'^[^._]+',module.stem):
+        if re.match(r'^[^._]+', module.stem):
             data_functions.append(importlib.import_module(f'modules.{module.stem}'))
-            
+
     # If we are testing one module
     if options.test_module is not None:
         test_module = Path(options.test_module)

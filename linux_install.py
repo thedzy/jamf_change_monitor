@@ -33,7 +33,6 @@ import pwd
 from configparser import RawConfigParser
 
 
-
 def main():
     # Initialise a log for the email
     logging.basicConfig(filename=None, format='{asctime} [{levelname:7}] {message}', level=options.debug, style='{')
@@ -72,7 +71,7 @@ def main():
     python = context.joinpath('bin', 'python3')
 
     # Append with dict with options
-    force = ' --force' if  options.force else ''
+    force = ' --force' if options.force else ''
 
     # Create configuration
     config = RawConfigParser()
@@ -81,12 +80,12 @@ def main():
     config.read_dict({
         'Unit': {
             'Description': 'Jamf Change Monitor',
-            'After':'network.target',
-            'Wants':'network-online.target'
+            'After': 'network.target',
+            'Wants': 'network-online.target'
         },
         'Service': {
-            'Type':'onshot',
-            'User':'root',
+            'Type': 'onshot',
+            'User': 'root',
             'ExecStart': f'{python} {destination} --config {options.config_file} {force}',
         },
         'Install': {
@@ -106,7 +105,7 @@ def main():
     timer = RawConfigParser()
     timer.optionxform = lambda option: option
     if options.hourly:
-        oncalendar='weekly'
+        oncalendar = 'weekly'
 
     if options.daily:
         oncalendar = 'daily'
@@ -135,7 +134,7 @@ def main():
 
         logging.info('Installing Timer at /etc/systemd/system/jamf_change_monitor.timer')
     logging.info('Installing Service at /etc/systemd/system/jamf_change_monitor.service')
-    
+
     # Launch the Service
     logging.info('Starting daemon')
     commands = ['/bin/systemctl daemon-reload',
@@ -202,7 +201,6 @@ def install_venv(source, destination, debug):
     logging.info(f'Installing files at {destination}')
     shutil.copytree(source, destination, dirs_exist_ok=True, ignore=shutil.ignore_patterns('*.ini', '*.log', 'data'))
     os.chmod(destination, 0o755)
-
 
 
 if __name__ == '__main__':
