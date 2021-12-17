@@ -74,9 +74,7 @@ def get(api_classic=None, api_universal=None, repo_path=None):
         api_query = api_universal.get_data('v1', 'computers-inventory', section=query_sections, page=page, size=size,
                                            sort='id:desc')
         logging.debug(f'Query {api_query.data}')
-        print(api_query.data['totalCount'], type(api_query.data['totalCount']))
         remainder = (api_query.data['totalCount'] / size) - page
-        print(remainder)
         data_objects.extend(api_query.data['results'])
         page += 1
 
@@ -146,7 +144,7 @@ def clean_data(json_data):
             if int(json_data['localUserAccounts'][index]['uid']) < 500:
                 del json_data['localUserAccounts'][index]
             else:
-                print(json_data['localUserAccounts'][index])
+                del json_data['localUserAccounts'][index]['homeDirectorySizeMb']
                 index += 1
 
     # Remove user extension attributes
