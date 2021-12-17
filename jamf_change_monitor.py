@@ -26,6 +26,7 @@ import logging
 import pprint
 import smtplib
 import subprocess
+import re
 from configparser import ConfigParser
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
@@ -231,9 +232,9 @@ def main():
     # Load all modules into memory
     data_functions = []
     for module in modules_path.glob('*.py'):
-        if not module.stem.startswith('_'):
+        if re.match(r'^[^._]+',module.stem):
             data_functions.append(importlib.import_module(f'modules.{module.stem}'))
-
+            
     # If we are testing one module
     if options.test_module is not None:
         test_module = Path(options.test_module)
