@@ -49,14 +49,15 @@ def main():
         logging.error('Must choose a frequency')
         exit()
 
-    # Check config
-    if not Path(options.config_file):
-        logging.error(f'No configuration found at {options.config_file}')
-        exit()
-
     # Source and destinations of the files
     source = Path(__file__).parent
     destination = Path(options.location)
+    config_file = Path(options.config_file)
+
+    # Check config
+    if not config_file.exists():
+        logging.warning(f'No configuration found at {config_file.absolute()}')
+        logging.warning(f'Ensure file exists at {config_file.absolute()}')
 
     logging.debug(f'{source} -> {destination}')
 
@@ -79,7 +80,7 @@ def main():
                 python.as_posix(),
                 '/usr/local/jamf_change_monitor/jamf_change_monitor.py',
                 '--config',
-                options.config_file
+                config_file.as_posix()
             ],
         'RunAtLoad': True,
         'StandardErrorPath': destination.joinpath('jamf_change_monitor_err.log').as_posix(),
@@ -205,10 +206,13 @@ def install_venv(source, destination, debug):
 
     logging.debug('Using {0}'.format(python))
 
-    # Move the file to its final destination and set the permissions
-    logging.info(f'Installing files at {destination}')
-    shutil.copytree(source, destination, dirs_exist_ok=True, ignore=shutil.ignore_patterns('*.ini', '*.log', 'data'))
-    os.chmod(destination, 0o755)
+    if destination.absolute() != Path(__file__).parent.absolute():
+        # Move the file to its final destination and set the permissions
+        logging.info(f'Installing files at {destination}')
+        shutil.copytree(source, destination, dirs_exist_ok=True,
+                        ignore=shutil.ignore_patterns('*.ini', '*.log', 'data'))
+        os.chmod(destination, 0o755)
+
 
 
 def split(*args, max_value=100, separator='-', stepper='/'):
@@ -320,7 +324,7 @@ if __name__ == '__main__':
                                          indent_increment=4, max_help_position=12, width=160))
 
     # debug a module
-    parser.add_argument('-l', '--location', default='/usr/local/jamf_change_monitor',
+    parser.add_argument('-l', '--location', default=Path(__file__).parent.absolute(),
                         action='store', dest='location',
                         help='install location\n'
                              'default: %(default)s')
@@ -352,7 +356,6 @@ if __name__ == '__main__':
     # Specify the location of the configuration file
     parser.add_argument('-c', '--config', default=Path(Path(__file__).parent).joinpath('config.ini'),
                         action='store', dest='config_file',
-                        required=True,
                         help='specify the permanent file location for the configuration\n'
                              'the file will not be moved')
 
