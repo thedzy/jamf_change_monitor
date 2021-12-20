@@ -470,18 +470,18 @@ if __name__ == '__main__':
     # debug a module
     parser.add_argument('-m', '--module', default=None,
                         action='store', dest='test_module',
-                        help='Test/run only a specific module')
+                        help='run only a specific module')
 
     # Force git cleanup
     parser.add_argument('--force',
                         action='store_true', dest='force',
                         help='Before starting add and commit everything into a clean repo\n'
-                             'Useful for testing a module')
+                             'useful for testing a module')
 
     # Specify the location of the configuration file
     parser.add_argument('-c', '--config', default=Path(Path(__file__).parent).joinpath('config.ini'),
                         action='store', dest='config_file',
-                        help='Specify an an alternate file for the configuration')
+                        help='specify an an alternate file for the configuration')
 
     parser.add_argument('--debug', const=10, default=20,
                         action='store_const', dest='debug',

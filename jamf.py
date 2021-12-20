@@ -118,7 +118,6 @@ class JamfClassic:
         self.__disable_warnings = bool(kwargs['disable_warnings']) if 'disable_warnings' in kwargs else False
         self.__proxy = kwargs['proxy'] if 'proxy' in kwargs else {}
 
-
         if self.__disable_warnings:
             urllib3.disable_warnings()
 
@@ -194,7 +193,8 @@ class JamfClassic:
         request_url = '{0}/JSSResource/{1}'.format(self.__api_url, '/'.join(str(arg) for arg in objects))
         try:
             request = requests.get(request_url, auth=(self.__username, self.__password),
-                                   headers=self.__headers, timeout=self.__timeout, verify=self.__verify, proxies=self.__proxy)
+                                   headers=self.__headers, timeout=self.__timeout, verify=self.__verify,
+                                   proxies=self.__proxy)
         except requests.exceptions.HTTPError as err:
             return APIResponse(url=request_url, err=err)
 
@@ -560,4 +560,3 @@ class JamfUAPI:
             return APIResponse(True, url=request_url, http_code=request.status_code)
         else:
             return APIResponse(False, url=request_url, http_code=request.status_code)
-
