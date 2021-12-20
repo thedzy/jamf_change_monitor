@@ -1,43 +1,71 @@
 ## Move modules here that you wish to disable, or keep from running
 
 A module is responsible for acquiring the data from the API and determining if any items have been removed. The files
-can be saved in anyway as long as the results returned can distinguish removed content and pulled content.
+can be saved in any way as long as the results returned are contained in a dictionary.
 
-**Requirements:**
+Requirements:
 ------
 
-### def get(api_classic=None, api_universal=None):
+### _def get(api_classic=None, api_universal=None)_:
 
 This is the default function of the module and what will be called when it is run. \
-It recieves a referesnce to a class for the classic API and a class for the universal API The module must return an
-array/list of tupples. Each tupple defines the file that was added change or deleted \
-The tupple contains:
+It receives a reference to a class for the classic API and a class for the universal API \ 
+The module must return a dictionary. The dictionary contains 1 key which is the name of the module \
+and in it 3 keys, add, diff, remove.  Each is a list of dictionaries containing 3 keys: name, id, file.  
 
-1. File name of the file:
-2. The user friendly name of the module
-3. The user friendly name of the item
-4. Integer for what has done with the file.
-    1. 0: File was added
-    2. 1: File was deleted
-    3. 2: Parent directory/folder was created
+| Key | Description |
+|-----|-------|
+| name | is the human-readable name |
+| id | is the identifier of the item |
+| file | is the full path to teh file |
 
-Example array/list:
+Example dictionary:
 
   ```
-  [
-   (ldapservers, LDAP Sservers, init, 0,),
-   (ldapservers/1.json, LDAP Sservers, tor.example.com, 0,),
-   (ldapservers/2.json, LDAP Sservers, tor.example.com, 0,),
-   (ldapservers/3.json, LDAP Sservers, win.example.com, 1,)
-  ]
+    {
+        'ebooks': {
+            'diff': [
+               {
+                  'name': 'Book of differences',
+                  'id': 3,
+                  'file': '/var/jamf_data/ebooks/3'
+               }
+            ],
+            'add': [
+               {
+                  'name': 'My book',
+                  'id': 33,
+                  'file': '/var/jamf_data/ebooks/33'
+               }
+            ],
+            'remove': [
+               {
+                  'name': 'Bad book',
+                  'id': 8,
+                  'file': '/var/jamf_data/ebooks/08'
+               }
+            ]
+        }
+    }
 ```
 
-The git commit function will add directory and remove deleted contents. Data that was pulled will be checked against the
-untracked file and changes. In this, ldapservers folder will be added and it's contents \
+The jamf_change_montor will use this to commit the changes, additions and removals
 
-In this example: \
-1.json will be added and the report will show 'Created: LDAP Sservers: tor.example.com' as the file is showing
-Untracked\
-2.json will be added and the report will show 'Changed: LDAP Sservers: tor.example.com' as the file is unstaged \
-3.json will be removed and the report will show 'Removed: LDAP Sservers: win.example.com' as the file is marked as
-deleted
+Recommendations:
+------
+
+### _clean_data(json_data)_:
+
+This is a function to remove data that will often change or remove data that is unnecessary to track.
+
+
+
+### _def get_name(json_data):_
+This is a function to extract the name of the object
+
+
+General Recommendations:
+------
+
+1. Avoid saving data that has not changed or not new
+2. Avoid (when possible) code that is unique to data so that the code can be easily copied to new modules
