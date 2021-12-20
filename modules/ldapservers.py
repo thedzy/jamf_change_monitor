@@ -54,7 +54,6 @@ def get(api_classic=None, api_universal=None, repo_path=None):
     logging.debug(f'Query {api_query.data}')
     data_objects = api_query.data
 
-
     if api_query.success:
         # Remove files
         for file in module_path.iterdir():
