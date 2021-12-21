@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 
-import os
+from pathlib import Path
+import re
 
 __all__ = []
-for item in os.listdir(os.path.dirname(__file__)):
-    file = os.path.splitext(item)[0]
-    if '_' not in file:
+for item in Path(__file__).parent.iterdir():
+    file = item.stem
+    if re.match(r'^[^._]+', file):
         __all__.append(file)
