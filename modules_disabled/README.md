@@ -49,7 +49,7 @@ Example dictionary:
     }
 ```
 
-The jamf_change_montor will use this to commit the changes, additions and removals
+The jamf_change_monitor will use this to commit the changes, additions and removals
 
 Recommendations:
 ------
