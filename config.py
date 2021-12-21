@@ -16,7 +16,7 @@ __email__ = 'thedzy@hotmail.com'
 __status__ = 'Development'
 
 __description__ = """
-create a configurtation file for jamf_change_monitor
+create a configuration file for jamf_change_monitor
 """
 
 import argparse

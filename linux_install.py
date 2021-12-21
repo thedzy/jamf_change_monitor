@@ -186,6 +186,8 @@ def install_venv(source, destination, debug):
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                universal_newlines=True)
 
+    logging.debug(process.stdout)
+
     command = f'{python} -m pip install requests'
     process = subprocess.Popen(command, shell=True,
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE,

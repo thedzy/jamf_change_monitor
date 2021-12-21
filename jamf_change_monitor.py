@@ -16,7 +16,7 @@ __email__ = 'thedzy@hotmail.com'
 __status__ = 'Development'
 
 __description__ = """
-pulls from the Jamf api and commit the files into git.  
+Pulls from the Jamf api and commit the files into git.  
 You can be alerted on the changes, see changes over time and use the data to revert changes made.',
 """
 
