@@ -135,3 +135,13 @@ optional arguments:
 ### simple_multitasking.py
 
 Class to handle the multitasking of the modules
+
+
+##Versions
+###1
+- Pulls and commit changes found in the repo
+###2
+- Pulls all the content and compares the contents to reduce unnecessary writes
+- Commits the changes based on the logs from the modules
+- A lot of rewrites, all the modules we re-done
+- Storing the files with just the id
