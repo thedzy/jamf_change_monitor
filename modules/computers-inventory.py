@@ -18,6 +18,7 @@ __status__ = 'Development'
 import json
 import logging
 import re
+from operator import itemgetter
 from pathlib import Path
 
 import modules_common
@@ -147,6 +148,9 @@ def clean_data(json_data):
                 del json_data['localUserAccounts'][index]['homeDirectorySizeMb']
                 index += 1
 
+        # Sort users by uid
+        json_data['localUserAccounts'] = sorted(json_data['localUserAccounts'], key=itemgetter('uid'))
+
     # Remove user extension attributes
     if 'userAndLocation' in json_data:
         del json_data['userAndLocation']['extensionAttributes']
@@ -154,6 +158,9 @@ def clean_data(json_data):
     # Remove OS extension attributes
     if 'operatingSystem' in json_data:
         del json_data['operatingSystem']['extensionAttributes']
+        del json_data['operatingSystem']['softwareUpdateDeviceId']
+
+
 
     return json_data
 
