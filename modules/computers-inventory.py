@@ -160,8 +160,6 @@ def clean_data(json_data):
         del json_data['operatingSystem']['extensionAttributes']
         del json_data['operatingSystem']['softwareUpdateDeviceId']
 
-
-
     return json_data
 
 

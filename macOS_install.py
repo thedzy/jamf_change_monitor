@@ -62,7 +62,7 @@ def main():
     logging.debug(f'{source} -> {destination}')
 
     # Setup venv in owner of install location
-    thread = Process(target=install_venv, args=[source, destination, options.debug])
+    thread = Process(target=install_venv, args=(source, destination, options.debug))
     thread.start()
     thread.join()
     thread.close()
