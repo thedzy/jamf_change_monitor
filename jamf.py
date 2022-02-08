@@ -192,7 +192,7 @@ class JamfClassic:
         # Get data
         request_url = '{0}/JSSResource/{1}'.format(self.__api_url, '/'.join(str(arg) for arg in objects))
         try:
-            request = requests.get(request_url, auth=(self.__username, self.__password),
+            request = requests.get(request_url, params=kwargs, auth=(self.__username, self.__password),
                                    headers=self.__headers, timeout=self.__timeout, verify=self.__verify,
                                    proxies=self.__proxy)
         except requests.exceptions.HTTPError as err:
@@ -216,7 +216,7 @@ class JamfClassic:
         # Delete data
         request_url = '{0}/JSSResource/{1}'.format(self.__api_url, '/'.join(str(arg) for arg in objects))
         try:
-            request = requests.delete(request_url, auth=(self.__username, self.__password),
+            request = requests.delete(request_url, params=kwargs, auth=(self.__username, self.__password),
                                       headers=self.__headers, timeout=self.__timeout, verify=self.__verify)
         except requests.exceptions.HTTPError as err:
             return APIResponse(url=request_url, err=err)
@@ -240,7 +240,7 @@ class JamfClassic:
         # Put data
         request_url = '{0}/JSSResource/{1}'.format(self.__api_url, '/'.join(str(arg) for arg in objects))
         try:
-            request = requests.put(request_url, auth=(self.__username, self.__password),
+            request = requests.put(request_url, params=kwargs, auth=(self.__username, self.__password),
                                    headers=self.__headers, timeout=self.__timeout, verify=self.__verify, data=data)
         except requests.exceptions.HTTPError as err:
             return APIResponse(url=request_url, err=err)
@@ -264,7 +264,7 @@ class JamfClassic:
         # Post data
         request_url = '{0}/JSSResource/{1}'.format(self.__api_url, '/'.join(str(arg) for arg in objects))
         try:
-            request = requests.post(request_url, auth=(self.__username, self.__password),
+            request = requests.post(request_url, params=kwargs, auth=(self.__username, self.__password),
                                     headers=self.__headers, timeout=self.__timeout, verify=self.__verify, data=data)
         except requests.exceptions.HTTPError as err:
             return APIResponse(url=request_url, err=err)
