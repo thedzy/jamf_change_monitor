@@ -6,17 +6,24 @@ Date:	2020-01-10
 Platform: macOS/Linux
 Description:
 Jamf classes to manage and interact with the APIs
+
+v2 - Removed all dependencies for external libraries
 """
 __author__ = 'thedzy'
 __copyright__ = 'Copyright 2020, thedzy'
 __license__ = 'GPL'
-__version__ = '1.0'
+__version__ = '2.0'
 __maintainer__ = 'thedzy'
 __email__ = 'thedzy@hotmail.com'
 __status__ = 'Development'
 
-import requests
-import urllib3
+import base64
+import json
+import logging
+import ssl
+import urllib.error
+import urllib.request
+import urllib.request
 
 
 class APIResponse:
@@ -29,7 +36,8 @@ class APIResponse:
     :property err: (str) Error if exception
     """
 
-    def __init__(self, success=False, url=None, response=None, http_code=0, err=None, **kwargs):
+    def __init__(self, success: bool = False, url: str = None, response: str = None, http_code: int = 0,
+                 err: str = None, **kwargs):
         """
         Initialisation method
         :param success: (bool) success of the call
@@ -49,7 +57,7 @@ class APIResponse:
 
         self.data = self.response
 
-    def success(self, success=None):
+    def success(self, success: bool = None) -> bool:
         """
         :param success: Set or retrieve property success
         :return: (bool) Current/new setting
@@ -59,7 +67,7 @@ class APIResponse:
 
         return self.success
 
-    def response(self, response=None):
+    def response(self, response: str = None) -> str:
         """
         :param response: Set or retrieve property response
         :return: (int) Current/new setting
@@ -69,7 +77,7 @@ class APIResponse:
 
         return self.response
 
-    def http_code(self, http_code=None):
+    def http_code(self, http_code: int = None) -> int:
         """
         :param http_code: Set or retrieve property http_code
         :return: (int) Current/new setting
@@ -79,7 +87,7 @@ class APIResponse:
 
         return self.http_code
 
-    def err(self, err=None):
+    def err(self, err: str = None) -> str:
         """
         :param err: Set or retrieve property err
         :return: (int) Current/new setting
@@ -95,7 +103,7 @@ class JamfClassic:
     JamfClassic interacts with the classic API of Jamf
     """
 
-    def __init__(self, api_url, username, password, *args, **kwargs):
+    def __init__(self, api_url: str, username: str, password: str, *args, **kwargs):
         """
         Initialisation method
         :param api_url: (str) url of the api
@@ -149,7 +157,7 @@ class JamfClassic:
         """
         self.__del__()
 
-    def timeout(self, timeout=None):
+    def timeout(self, timeout: int = None) -> int:
         """
         Set or retrieve the timeout
         :param timeout: (int) new value or (None) to remain
@@ -160,7 +168,7 @@ class JamfClassic:
 
         return self.__timeout
 
-    def verify_ssl(self, verify=None):
+    def verify_ssl(self, verify: bool = None) -> bool:
         """
         Set or retrieve whether to verify teh SSL certificate
         :param verify: (bool) new value or (None) to remain
@@ -169,17 +177,7 @@ class JamfClassic:
         if verify is not None and isinstance(verify, bool):
             self.__verify = verify
 
-    @staticmethod
-    def disable_warnings():
-        """
-        Disable warnings for ssl verify
-        Making unverified HTTPS requests is strongly discouraged, however,
-        if you understand the risks and wish to disable these warnings, you can use disable_warnings()
-        :return: (bool) Current/new setting
-        """
-        urllib3.disable_warnings()
-
-    def get_data(self, *objects, **kwargs):
+    def get_data(self, *objects, **kwargs) -> urllib.request:
         """
         GET from the api
         :param objects: (list) of objects ex. /JSSResource/computer/id/0 = ['computer', 'id', 0]
@@ -190,97 +188,68 @@ class JamfClassic:
             return APIResponse(response='No object specified')
 
         # Get data
-        request_url = '{0}/JSSResource/{1}'.format(self.__api_url, '/'.join(str(arg) for arg in objects))
+        request_url = f'{self.__api_url}/JSSResource/{"/".join(str(arg) for arg in objects)}'
         try:
-            request = requests.get(request_url, params=kwargs, auth=(self.__username, self.__password),
-                                   headers=self.__headers, timeout=self.__timeout, verify=self.__verify,
-                                   proxies=self.__proxy)
-        except requests.exceptions.HTTPError as err:
+            request = self.request(request_url, params=kwargs, auth=(self.__username, self.__password),
+                                   headers=self.__headers, timeout=self.__timeout, verify=self.__verify)
+        except urllib.error.URLError as err:
             return APIResponse(url=request_url, err=err)
 
-        if request.status_code == requests.codes.ok:
-            return APIResponse(True, request_url, request.json(), request.status_code)
-        else:
-            return APIResponse(False, request_url, request.text, request.status_code)
+        return request
 
-    def del_data(self, *objects, **kwargs):
-        """
-        DELETE to the api
-        :param objects: (list) of objects ex. /JSSResource/computer/id/0 = ['computer', 'id', 0]
-        :param kwargs: None
-        :return:
-        """
-        if not objects:
-            return APIResponse(response='No object specified')
+    def request(self, url: str, method: str = 'GET', data: dict = None, auth: dict = None, params: dict = {},
+                headers: dict = {}, timeout: int = 120, verify: bool = True) -> urllib.request:
+        # SSL validations
+        context = ssl.SSLContext() if verify else ssl._create_unverified_context()
 
-        # Delete data
-        request_url = '{0}/JSSResource/{1}'.format(self.__api_url, '/'.join(str(arg) for arg in objects))
+        # Url parameters
+        parameters = self.get_params(params)
+
         try:
-            request = requests.delete(request_url, params=kwargs, auth=(self.__username, self.__password),
-                                      headers=self.__headers, timeout=self.__timeout, verify=self.__verify)
-        except requests.exceptions.HTTPError as err:
-            return APIResponse(url=request_url, err=err)
+            url_request = urllib.request.Request(url + parameters, data=data, headers=headers, method=method)
+            if auth:
+                basic_encoded = base64.standard_b64encode(f'{auth[0]}:{auth[1]}'.encode('ascii'))
+                url_request.add_header('Authorization', f'Basic {basic_encoded.decode("ascii")}')
+            with urllib.request.urlopen(url_request, timeout=timeout, context=context) as response:
+                response.text = response.read()
+                setattr(response, 'success', True if 200 <= response.code < 300 else False)
+                try:
+                    setattr(response, 'data', json.loads(response.text))
+                except (UnicodeDecodeError, json.decoder.JSONDecodeError):
+                    setattr(response, 'data', dict(text=response.text))
+        except urllib.error.HTTPError as err:
+            logging.error(err)
 
-        if request.status_code == requests.codes.no_content:
-            return APIResponse(True, request_url, None, request.status_code)
+        return response
+
+    @staticmethod
+    def get_params(params: dict) -> str:
+        def parse(value=None, key=None):
+            parsed_params = []
+            if isinstance(value, dict):
+                for key, value in value.items():
+                    parsed_params.extend(parse(value, key))
+            elif isinstance(value, list):
+                for item in value:
+                    parsed_params.append(f'{key}={item}')
+            else:
+                parsed_params.append(f'{key}={value}')
+
+            return parsed_params
+
+        param_options = parse(params)
+        if len(param_options) > 0:
+            return f'?{"&".join(param_options)}'
         else:
-            return APIResponse(False, request_url, request.text, request.status_code)
-
-    def put_data(self, data, *objects, **kwargs):
-        """
-        PUT to the api
-        :param data: (dict) data to post
-        :param objects: (list) of objects ex. /JSSResource/computer/id/0 = ['computer', 'id', 0]
-        :param kwargs: None
-        :return:
-        """
-        if not objects:
-            return APIResponse(response='No object specified')
-
-        # Put data
-        request_url = '{0}/JSSResource/{1}'.format(self.__api_url, '/'.join(str(arg) for arg in objects))
-        try:
-            request = requests.put(request_url, params=kwargs, auth=(self.__username, self.__password),
-                                   headers=self.__headers, timeout=self.__timeout, verify=self.__verify, data=data)
-        except requests.exceptions.HTTPError as err:
-            return APIResponse(url=request_url, err=err)
-
-        if request.status_code == requests.codes.created:
-            return APIResponse(True, request_url, None, request.status_code)
-        else:
-            return APIResponse(False, request_url, request.text, request.status_code)
-
-    def post_data(self, data, *objects, **kwargs):
-        """
-        POST to the api
-        :param data: (dict) data to post
-        :param objects: (list) of objects ex. /JSSResource/computer/id/0 = ['computer', 'id', 0]
-        :param kwargs: None
-        :return:
-        """
-        if not objects:
-            return APIResponse(response='No object specified')
-
-        # Post data
-        request_url = '{0}/JSSResource/{1}'.format(self.__api_url, '/'.join(str(arg) for arg in objects))
-        try:
-            request = requests.post(request_url, params=kwargs, auth=(self.__username, self.__password),
-                                    headers=self.__headers, timeout=self.__timeout, verify=self.__verify, data=data)
-        except requests.exceptions.HTTPError as err:
-            return APIResponse(url=request_url, err=err)
-
-        if request.status_code == requests.codes.created:
-            return APIResponse(True, request_url, None, request.status_code)
-        else:
-            return APIResponse(False, request_url, request.text, request.status_code)
+            return ''
 
 
 class JamfUAPI:
     """
-    JAMFUAPI interacts with the universal API of Jamf
+    JamfUAPI interacts with the universal API of Jamf
     """
 
-    def __init__(self, api_url, username, password, *args, **kwargs):
+    def __init__(self, api_url: str, username: str, password: str, *args, **kwargs):
         """
         Initialisation method
         :param api_url: (str) url of the api
@@ -314,9 +283,9 @@ class JamfUAPI:
         :return: (void)
         """
         try:
-            requests.post(self.__api_url + '/uapi/auth/invalidateToken',
-                          headers=self.__headers, timeout=self.__timeout, verify=self.__verify, data=None)
-        except requests.exceptions.HTTPError:
+            self.request(f'{self.__api_url}/api/v1/auth/invalidate-token', method='POST',
+                         headers=self.__headers, timeout=self.__timeout, verify=self.__verify, data=None)
+        except urllib.error.HTTPError:
             return None
 
         self._token = None
@@ -344,43 +313,43 @@ class JamfUAPI:
         Initialise the login
         :return: (APIResponse)
         """
-        request_url = self.__api_url + '/uapi/auth/tokens'
+        url = f'{self.__api_url}/api/v1/auth/token'
 
         try:
-            request = requests.post(request_url, auth=(self.__username, self.__password),
-                                    headers=self.__headers, timeout=self.__timeout, verify=self.__verify, data=None)
-        except requests.exceptions.HTTPError as err:
-            return APIResponse(url=request_url, err=err)
+            request = self.request(url, method='POST', auth=(self.__username, self.__password),
+                                   headers=self.__headers, timeout=self.__timeout, verify=self.__verify, data=None)
+        except urllib.error.HTTPError as err:
+            return APIResponse(url=url, err=err)
 
-        if request.status_code == requests.codes.ok:
-            self._token = request.json()['token']
-            self.__headers['Authorization'] = 'Bearer ' + self._token
-            return APIResponse(True, request_url, request.text, request.status_code)
+        if 200 <= request.code < 300:
+            self._token = request.data['token']
+            self.__headers['Authorization'] = f'Bearer {self._token}'
+            return request
         else:
             self._token = None
-            return APIResponse(False, request_url, request.text, request.status_code)
+            return request
 
-    def renew_token(self):
+    def renew_token(self) -> urllib.request:
         """
         Renew the login token
         :return: (APIResponse)
         """
-        request_url = self.__api_url + '/uapi/auth/keepAlive'
+        url = f'{self.__api_url}/api/v1/auth/keep-alive'
 
         try:
-            request = requests.post(request_url,
-                                    headers=self.__headers, timeout=self.__timeout, verify=self.__verify, data=None)
-        except requests.exceptions.HTTPError as err:
-            return APIResponse(url=request_url, err=err)
+            request = self.request(url, method='POST',
+                                   headers=self.__headers, timeout=self.__timeout, verify=self.__verify, data=None)
+        except urllib.error.HTTPError as err:
+            return APIResponse(url=url, err=err)
 
-        if request.status_code == requests.codes.ok:
-            self._token = request.json()['token']
-            self.__headers['Authorization'] = 'Bearer ' + self._token
-            return APIResponse(True, request_url, request.text, request.status_code)
+        if 200 <= request.code < 300:
+            self._token = request.data['token']
+            self.__headers['Authorization'] = f'Bearer {self._token}'
+            return request
         else:
-            return APIResponse(False, request_url, request.text, request.status_code)
+            return request
 
-    def timeout(self, timeout=None):
+    def timeout(self, timeout: int = None) -> int:
         """
         Set or retrieve the timeout
         :param timeout: (int) new value or (None) to remain
@@ -391,7 +360,7 @@ class JamfUAPI:
 
         return self.__timeout
 
-    def verify_ssl(self, verify=None):
+    def verify_ssl(self, verify: bool = None) -> bool:
         """
         Set or retrieve whether to verify teh SSL certificate
         :param verify: (bool) new value or (None) to remain
@@ -402,24 +371,14 @@ class JamfUAPI:
 
         return self.__verify
 
-    @staticmethod
-    def disable_warnings():
-        """
-        Disable warnings for ssl verify
-        Making unverified HTTPS requests is strongly discouraged, however,
-        if you understand the risks and wish to disable these warnings, you can use disable_warnings()
-        :return: (bool) Current/new setting
-        """
-        urllib3.disable_warnings()
-
-    def get_login(self):
+    def get_login(self) -> dict:
         """
         Get login information
         :return: (APIResponse)
         """
         return self.get_data('auth')
 
-    def get_data(self, *objects, **kwargs):
+    def get_data(self, *objects: any, **params: dict) -> urllib.request:
         """
         GET from the api
         :param objects: (list) of objects ex. /uapi/computer/id/0 = ['computer', 'id', 0]
@@ -429,134 +388,58 @@ class JamfUAPI:
         if not objects:
             return APIResponse(response='No object specified')
 
-        options = []
-        for kwarg in kwargs:
-            if isinstance(kwargs[kwarg], list) or isinstance(kwargs[kwarg], tuple):
-                for item in kwargs[kwarg]:
-                    options.append('{0}={1}'.format(kwarg, item))
-            else:
-                options.append('{0}={1}'.format(kwarg, str(kwargs[kwarg])))
-
-        invalid_chars = '() '
-        options = '?' + '&'.join(options)
-        options = ''.join(char for char in options if char not in invalid_chars)
-
         # Get data
-        request_url = '{0}/uapi/{1}{2}'.format(self.__api_url, '/'.join(str(arg) for arg in objects), options)
+        url = f'{self.__api_url}/uapi/{"/".join(str(arg) for arg in objects)}'
         try:
-            request = requests.get(request_url,
+            request = self.request(url, params=params,
                                    headers=self.__headers, timeout=self.__timeout, verify=self.__verify)
         except requests.exceptions.HTTPError as err:
-            return APIResponse(url=request_url, err=err)
+            return APIResponse(url=url, err=err)
 
-        if request.status_code == requests.codes.ok:
-            return APIResponse(True, request_url, request.json(), request.status_code)
-        else:
-            return APIResponse(False, request_url, request.text, request.status_code)
+        return request
 
-    def del_data(self, *objects, **kwargs):
-        """
-        DELETE from the api
-        :param objects: (list) of objects ex. /uapi/computer/id/0 = ['computer', 'id', 0]
-        :param kwargs: (dict) options ex: sort=asc
-        :return: (APIResponse)
-        """
-        if not objects:
-            return APIResponse(response='No object specified')
+    def request(self, url: str, method: str = 'GET', data: dict = None, auth: dict = None, params: dict = {},
+                headers: dict = {}, timeout: int = 120, verify: bool = True) -> urllib.request:
+        # SSL validations
+        context = ssl.SSLContext() if verify else ssl._create_unverified_context()
 
-        options = []
-        for kwarg in kwargs:
-            if isinstance(kwargs[kwarg], list) or isinstance(kwargs[kwarg], tuple):
-                for item in kwargs[kwarg]:
-                    options.append('{0}={1}'.format(kwarg, item))
-            else:
-                options.append('{0}={1}'.format(kwarg, str(kwargs[kwarg])))
+        # Url parameters
+        parameters = self.get_params(params)
 
-        invalid_chars = '() '
-        options = '?' + '&'.join(options)
-        options = ''.join(char for char in options if char not in invalid_chars)
-
-        # Delete data
-        request_url = '{0}/uapi/{1}{2}'.format(self.__api_url, '/'.join(str(arg) for arg in objects), options)
         try:
-            request = requests.delete(request_url,
-                                      headers=self.__headers, timeout=self.__timeout, verify=self.__verify)
-        except requests.exceptions.HTTPError as err:
-            return APIResponse(url=request_url, err=err)
+            url_request = urllib.request.Request(url + parameters, data=data, headers=headers, method=method)
+            if auth:
+                basic_encoded = base64.standard_b64encode(f'{auth[0]}:{auth[1]}'.encode('ascii'))
+                url_request.add_header('Authorization', f'Basic {basic_encoded.decode("ascii")}')
+            with urllib.request.urlopen(url_request, timeout=timeout, context=context) as response:
+                response.text = response.read()
+                setattr(response, 'success', True if 200 <= response.code < 300 else False)
+                try:
+                    setattr(response, 'data', json.loads(response.text))
+                except (UnicodeDecodeError, json.decoder.JSONDecodeError):
+                    setattr(response, 'data', dict(text=response.text))
+        except urllib.error.HTTPError as err:
+            logging.error(err)
 
-        if request.status_code == requests.codes.no_content:
-            return APIResponse(True, url=request_url, http_code=request.status_code)
-        else:
-            return APIResponse(False, url=request_url, http_code=request.status_code)
+        return response
 
-    def put_data(self, data, *objects, **kwargs):
-        """
-        PUT to the api
-        :param data: (dict) data to post
-        :param objects: (list) of objects ex. /uapi/computer/id/0 = ['computer', 'id', 0]
-        :param kwargs: (dict) options ex: sort=asc
-        :return: (APIResponse)
-        """
-        if not objects:
-            return APIResponse(response='No object specified')
-
-        options = []
-        for kwarg in kwargs:
-            if isinstance(kwargs[kwarg], list) or isinstance(kwargs[kwarg], tuple):
-                for item in kwargs[kwarg]:
-                    options.append('{0}={1}'.format(kwarg, item))
+    @staticmethod
+    def get_params(params: dict) -> str:
+        def parse(value=None, key=None):
+            parsed_params = []
+            if isinstance(value, dict):
+                for key, value in value.items():
+                    parsed_params.extend(parse(value, key))
+            elif isinstance(value, list):
+                for item in value:
+                    parsed_params.append(f'{key}={item}')
             else:
-                options.append('{0}={1}'.format(kwarg, str(kwargs[kwarg])))
+                parsed_params.append(f'{key}={value}')
 
-        invalid_chars = '() '
-        options = '?' + '&'.join(options)
-        options = ''.join(char for char in options if char not in invalid_chars)
+            return parsed_params
 
-        # Put data
-        request_url = '{0}/uapi/{1}{2}'.format(self.__api_url, '/'.join(str(arg) for arg in objects), options)
-        try:
-            request = requests.put(request_url,
-                                   headers=self.__headers, timeout=self.__timeout, verify=self.__verify, data=data)
-        except requests.exceptions.HTTPError as err:
-            return APIResponse(url=request_url, err=err)
-
-        if request.status_code == requests.codes.created:
-            return APIResponse(True, url=request_url, http_code=request.status_code)
+        param_options = parse(params)
+        if len(param_options) > 0:
+            return f'?{"&".join(param_options)}'
         else:
-            return APIResponse(False, url=request_url, http_code=request.status_code)
-
-    def post_data(self, data, *objects, **kwargs):
-        """
-        POST to the api
-        :param data: (dict) data to post
-        :param objects: (list) of objects ex. /uapi/computer/id/0 = ['computer', 'id', 0]
-        :param kwargs: (dict) options ex: sort=asc
-        :return: (APIResponse)
-        """
-        if not objects:
-            return APIResponse(response='No object specified')
-
-        options = []
-        for kwarg in kwargs:
-            if isinstance(kwargs[kwarg], list) or isinstance(kwargs[kwarg], tuple):
-                for item in kwargs[kwarg]:
-                    options.append('{0}={1}'.format(kwarg, item))
-            else:
-                options.append('{0}={1}'.format(kwarg, str(kwargs[kwarg])))
-
-        invalid_chars = '() '
-        options = '?' + '&'.join(options)
-        options = ''.join(char for char in options if char not in invalid_chars)
-
-        # Post data
-        request_url = '{0}/uapi/{1}{2}'.format(self.__api_url, '/'.join(str(arg) for arg in objects), options)
-        try:
-            request = requests.post(request_url,
-                                    headers=self.__headers, timeout=self.__timeout, verify=self.__verify, data=data)
-        except requests.exceptions.HTTPError as err:
-            return APIResponse(url=request_url, err=err)
-
-        if request.status_code == requests.codes.created:
-            return APIResponse(True, url=request_url, http_code=request.status_code)
-        else:
-            return APIResponse(False, url=request_url, http_code=request.status_code)
+            return ''
