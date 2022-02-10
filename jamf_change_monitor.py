@@ -162,8 +162,20 @@ def main():
 
     # Initialise a log for the email
     log_ext = '.txt'
-    log_file = Path(base_path).joinpath(file_path.stem).with_suffix(log_ext) if options.debug > 10 else None
-    logging.basicConfig(filename=log_file, format='{asctime} [{levelname:7}] {message}', level=options.debug, style='{')
+    log_file = Path(base_path).joinpath(file_path.stem).with_suffix(log_ext)
+
+    # Create file handler
+    file_handler = logging.FileHandler(log_file)
+    file_handler.setLevel(options.debug)
+    handlers = [file_handler]
+
+    # Create stream handler
+    if options.screen:
+        stream_handler = logging.StreamHandler()
+        stream_handler.setLevel(options.debug)
+        handlers.append(stream_handler)
+
+    logging.basicConfig(handlers=handlers, format='{asctime} [{levelname:7}] {message}', level=options.debug, style='{')
 
     # Ensure a log file exists even if blank for the attachment
     if log_file is None:
@@ -482,6 +494,10 @@ if __name__ == '__main__':
     parser.add_argument('-c', '--config', default=Path(Path(__file__).parent).joinpath('config.ini'),
                         action='store', dest='config_file',
                         help='specify an an alternate file for the configuration')
+
+    parser.add_argument('--screen', default=False,
+                        action='store_true', dest='screen',
+                        help='screen output')
 
     parser.add_argument('--debug', const=10, default=20,
                         action='store_const', dest='debug',
