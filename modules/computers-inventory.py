@@ -23,6 +23,12 @@ from pathlib import Path
 
 import modules_common
 
+"""
+WARNING:
+This module can be very noisy.  Use with caution.
+Consider limiting sections or applying heavy cleaning to the data
+"""
+
 
 @modules_common.timer(__file__)
 def get(api_classic=None, api_universal=None, repo_path=None):
@@ -145,7 +151,10 @@ def clean_data(json_data):
             if int(json_data['localUserAccounts'][index]['uid']) < 500:
                 del json_data['localUserAccounts'][index]
             else:
+                # Remove user directory sizes
                 del json_data['localUserAccounts'][index]['homeDirectorySizeMb']
+                # Remove user type, Jamf tends to flip flop on this value
+                del json_data['localUserAccounts'][index]['userAccountType']
                 index += 1
 
         # Sort users by uid
@@ -160,6 +169,21 @@ def clean_data(json_data):
         del json_data['operatingSystem']['extensionAttributes']
         del json_data['operatingSystem']['softwareUpdateDeviceId']
 
+    # Remove disk encryption attributes
+    if 'diskEncryption' in json_data:
+        del json_data['diskEncryption']['bootPartitionEncryptionDetails']['partitionFileVault2Percent']
+
+    # Remove security data
+    if 'security' in json_data:
+        del json_data['security']['xprotectVersion']
+
+    if 'configurationProfiles' in json_data:
+        for configuration_profile in json_data['configurationProfiles']:
+            del configuration_profile['id']
+            del configuration_profile['username']
+            del configuration_profile['lastInstalled']
+            del configuration_profile['profileIdentifier']
+
     return json_data
 
 
@@ -170,6 +194,9 @@ def get_name(json_data):
     :return: (str) User friendly name
     """
 
-    name = json_data['udid']
+    try:
+        name = json_data['userAndLocation']['email']
+    except:
+        name = json_data['udid']
 
     return name
