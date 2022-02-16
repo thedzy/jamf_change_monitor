@@ -11,7 +11,7 @@
 # How it works:
 
 1. Each module in the modules' folder is run simultaneously
-2. Each module downloads data from the API into a git repository
+2. Each module downloads data from the API into a git repository and removes untracked data
 3. Each file is committed and or removed
 4. A log of diff changes are emailed
 5. (Optionally) Push the changes to a remote repository
@@ -27,7 +27,7 @@ _See:_ [modules_disabled/README.md](modules_disabled/README.md) for more informa
 
 ## Modules Disabled
 
-### Move modules here that you wish to disable, or keep from running
+Move modules here that you wish to disable, or keep from running
 
 ## Files
 
@@ -95,11 +95,12 @@ Options:
 
 ### continuous.sh
 
-**[ Legacy ]** Script to run the python script in a continuous loop
+**[ Legacy ]** Script to run the python script in a continuous loop. Use only the system daemons or tasks.
 
 ### jamf.py
 
-Jamf classes to access the api
+Jamf classes to access the api. \
+v2. Rewritten, the code is still compatible with the old module and can be swapped.
 
 ### macOS_install.py
 
@@ -109,9 +110,13 @@ Assist with the installation of the script on macOS. Move the files to their fin
 
 Assist with the installation of the script on Linux. Move the files to their final location and set up a daemon
 
+### window_install.py
+
+Assist with the installation of the script on Windows. Move the files to their final location and set up a daemon
+
 ### modules_common.py
 
-Functions that will be common across all modules.
+Functions that can be accessed across all modules.
 
 ### jamf_change_monitor.py
 
@@ -121,27 +126,33 @@ The main program
 usage:
 Pulls from the Jamf api and commit the files into git.
 You can be alerted on the changes, see changes over time and use the data to revert changes made.',
- [-h] [-m TEST_MODULE] [--force] [-c CONFIG_FILE]
+
+       [-h] [-m TEST_MODULE] [--force] [-c CONFIG_FILE] [--screen]
 
 optional arguments:
   -h, --help            show this help message and exit
   -m TEST_MODULE, --module TEST_MODULE
                         run only a specific module
-  --force               Before starting add and commit everything into a clean repo useful for testing a module
+  --force               before starting add and commit everything into a clean repo useful for testing a module
   -c CONFIG_FILE, --config CONFIG_FILE
                         specify an an alternate file for the configuration
+  --screen              screen output
 ```
 
 ### simple_multitasking.py
 
 Class to handle the multitasking of the modules
 
+## Versions
 
-##Versions
-###1
+### 1
+
 - Pulls and commit changes found in the repo
-###2
+
+### 2
+
 - Pulls all the content and compares the contents to reduce unnecessary writes
 - Commits the changes based on the logs from the modules
-- A lot of rewrites, all the modules we re-done
-- Storing the files with just the id
+- A lot of rewrites, all the modules are re-done
+- Storing the files with just the id, instead of <id>.json
+- Rewritten jamf.py to remove dependency on external modules (request, urllib3).  All code is still compatible with old module.
