@@ -1,2 +1,3 @@
 
 [] Allow external repos with git push/pull
+[] Support classic API without basic auth
