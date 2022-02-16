@@ -487,7 +487,7 @@ if __name__ == '__main__':
     # Force git cleanup
     parser.add_argument('--force',
                         action='store_true', dest='force',
-                        help='Before starting add and commit everything into a clean repo\n'
+                        help='before starting add and commit everything into a clean repo\n'
                              'useful for testing a module')
 
     # Specify the location of the configuration file
