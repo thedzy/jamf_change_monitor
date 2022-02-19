@@ -87,7 +87,7 @@ class APIResponse:
 
         return self.http_code
 
-    def err(self, err: str = None) -> str:
+    def err(self, err: str = None) -> float:
         """
         :param err: Set or retrieve property err
         :return: (int) Current/new setting
@@ -157,7 +157,7 @@ class JamfClassic:
         """
         self.__del__()
 
-    def timeout(self, timeout: int = None) -> int:
+    def timeout(self, timeout: int = None) -> float:
         """
         Set or retrieve the timeout
         :param timeout: (int) new value or (None) to remain
@@ -176,6 +176,8 @@ class JamfClassic:
         """
         if verify is not None and isinstance(verify, bool):
             self.__verify = verify
+
+        return self.__verify
 
     def get_data(self, *objects, **kwargs) -> urllib.request:
         """
@@ -197,10 +199,17 @@ class JamfClassic:
 
         return request
 
-    def request(self, url: str, method: str = 'GET', data: dict = None, auth: dict = None, params: dict = {},
-                headers: dict = {}, timeout: int = 120, verify: bool = True) -> urllib.request:
+    def request(self, url: str, method: str = 'GET', data: dict = None, auth: tuple = None, params: dict = None,
+                headers: dict = None, timeout: int = 120, verify: bool = True) -> urllib.request:
+        # Set defaults
+        params = params if params else {}
+        headers = headers if headers else {}
+
         # SSL validations
-        context = ssl.SSLContext() if verify else ssl._create_unverified_context()
+        context = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
+        context.verify_mode = ssl.CERT_REQUIRED if verify else ssl.CERT_NONE
+        context.check_hostname = verify
+        context.load_default_certs()
 
         # Url parameters
         parameters = self.get_params(params)
@@ -349,7 +358,7 @@ class JamfUAPI:
         else:
             return request
 
-    def timeout(self, timeout: int = None) -> int:
+    def timeout(self, timeout: int = None) -> float:
         """
         Set or retrieve the timeout
         :param timeout: (int) new value or (None) to remain
@@ -382,7 +391,7 @@ class JamfUAPI:
         """
         GET from the api
         :param objects: (list) of objects ex. /uapi/computer/id/0 = ['computer', 'id', 0]
-        :param kwargs: (dict) options ex: sort=asc
+        :param params: (dict) options ex: sort=asc
         :return: (APIResponse)
         """
         if not objects:
@@ -398,10 +407,17 @@ class JamfUAPI:
 
         return request
 
-    def request(self, url: str, method: str = 'GET', data: dict = None, auth: dict = None, params: dict = {},
-                headers: dict = {}, timeout: int = 120, verify: bool = True) -> urllib.request:
+    def request(self, url: str, method: str = 'GET', data: dict = None, auth: tuple = None, params: dict = None,
+                headers: dict = None, timeout: int = 120, verify: bool = True) -> urllib.request:
+        # Set defaults
+        params = params if params else {}
+        headers = headers if headers else {}
+
         # SSL validations
-        context = ssl.SSLContext() if verify else ssl._create_unverified_context()
+        context = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
+        context.verify_mode = ssl.CERT_REQUIRED if verify else ssl.CERT_NONE
+        context.check_hostname = verify
+        context.load_default_certs()
 
         # Url parameters
         parameters = self.get_params(params)
