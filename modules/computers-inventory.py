@@ -20,12 +20,13 @@ import logging
 import re
 from operator import itemgetter
 from pathlib import Path
+import pprint
 
 import modules_common
 
 """
 WARNING:
-This module can be very noisy.  Use with caution.
+This module can be very noisy.  Use with caution and configure what data you with track.
 Consider limiting sections or applying heavy cleaning to the data
 """
 
@@ -61,22 +62,26 @@ def get(api_classic=None, api_universal=None, repo_path=None):
     remainder, page, size = 1, 0, 200
     while remainder > 0:
         """ Available sections
-            Too many sections impacts performance and makes reports noisy as computer details frequently change
-            GENERAL,                    CERTIFICATES,
-            DISK_ENCRYPTION,            ATTACHMENTS,
-            PURCHASING,                 SECURITY,
-            CONFIGURATION_PROFILES,     OPERATING_SYSTEM,
-            PLUGINS,FONTS,A             LICENSED_SOFTWARE,
-            APPLICATIONS,               IBEACONS,
-            SERVICES,STORAGE,           SOFTWARE_UPDATES,
-            USER_AND_LOCATION,          EXTENSION_ATTRIBUTES,
-            PRINTERS,HARDWARE,          CONTENT_CACHING,
-            LOCAL_USER_ACCOUNTS,        GROUP_MEMBERSHIPS,
+            Too many sections impacts performance and makes reports noisy
+            APPLICATIONS            LICENSED_SOFTWARE
+            ATTACHMENTS             LOCAL_USER_ACCOUNTS
+            CERTIFICATES            OPERATING_SYSTEM
+            CONFIGURATION_PROFILES  PLUGINS
+            CONTENT_CACHING         PRINTERS,HARDWARE
+            DISK_ENCRYPTION         PURCHASING
+            EXTENSION_ATTRIBUTES    SECURITY
+            FONTS                   SERVICES
+            GENERAL                 SOFTWARE_UPDATES
+            GROUP_MEMBERSHIPS       STORAGE
+            IBEACONS                USER_AND_LOCATION        
         """
         query_sections = [
+            'GENERAL',
             'USER_AND_LOCATION',
             'LOCAL_USER_ACCOUNTS',
-            'OPERATING_SYSTEM'
+            'OPERATING_SYSTEM',
+            'DISK_ENCRYPTION',
+            'SECURITY',
         ]
         api_query = api_universal.get_data('v1', 'computers-inventory', section=query_sections, page=page, size=size,
                                            sort='id:desc')
@@ -144,6 +149,45 @@ def clean_data(json_data):
         if json_data[key] is None:
             del json_data[key]
 
+    # Remove certificates data
+    if 'certificates' in json_data:
+        index = 0
+        while index < len(json_data['certificates']):
+            del json_data['certificates'][index]['expirationDate']
+            index += 1
+
+    if 'configurationProfiles' in json_data:
+        for configuration_profile in json_data['configurationProfiles']:
+            del configuration_profile['id']
+            del configuration_profile['username']
+            del configuration_profile['lastInstalled']
+            del configuration_profile['profileIdentifier']
+
+    # Remove disk encryption attributes
+    if 'diskEncryption' in json_data:
+        del json_data['diskEncryption']['bootPartitionEncryptionDetails']['partitionFileVault2Percent']
+
+    # Remove fluctuating/changing/inconsequential general data
+    if 'general' in json_data:
+        del json_data['general']['lastIpAddress']
+        del json_data['general']['lastReportedIp']
+        del json_data['general']['jamfBinaryVersion']
+        del json_data['general']['reportDate']
+        del json_data['general']['lastContactTime']
+        del json_data['general']['lastEnrolledDate']
+        del json_data['general']['mdmProfileExpiration']
+        del json_data['general']['initialEntryDate']
+        del json_data['general']['site']
+        del json_data['general']['extensionAttributes']
+        del json_data['general']['lastCloudBackupDate']
+
+    # Remove hardware extension attributes
+    if 'hardware' in json_data:
+        del json_data['hardware']['extensionAttributes']
+        del json_data['hardware']['batteryCapacityPercent']
+        del json_data['hardware']['smcVersion']
+        del json_data['hardware']['bootRom']
+
     # Remove system users
     if 'localUserAccounts' in json_data:
         index = 0
@@ -153,36 +197,46 @@ def clean_data(json_data):
             else:
                 # Remove user directory sizes
                 del json_data['localUserAccounts'][index]['homeDirectorySizeMb']
-                # Remove user type, Jamf tends to flip flop on this value
+                # Remove user type, Jamf tends to flip flop on these values
                 del json_data['localUserAccounts'][index]['userAccountType']
                 index += 1
 
         # Sort users by uid
         json_data['localUserAccounts'] = sorted(json_data['localUserAccounts'], key=itemgetter('uid'))
 
-    # Remove user extension attributes
-    if 'userAndLocation' in json_data:
-        del json_data['userAndLocation']['extensionAttributes']
-
     # Remove OS extension attributes
     if 'operatingSystem' in json_data:
         del json_data['operatingSystem']['extensionAttributes']
         del json_data['operatingSystem']['softwareUpdateDeviceId']
+        del json_data['operatingSystem']['fileVault2Status']
 
-    # Remove disk encryption attributes
-    if 'diskEncryption' in json_data:
-        del json_data['diskEncryption']['bootPartitionEncryptionDetails']['partitionFileVault2Percent']
+        # If you don't want to be notified of every version change on a system, uncomment
+        version = json_data['operatingSystem']['version'].split('.')
+        json_data['operatingSystem']['version'] = '.'.join(version[:2])
+        del json_data['operatingSystem']['build']
+
+    # Remove purchasing extension attributes
+    if 'purchasing' in json_data:
+        del json_data['purchasing']['extensionAttributes']
 
     # Remove security data
     if 'security' in json_data:
         del json_data['security']['xprotectVersion']
 
-    if 'configurationProfiles' in json_data:
-        for configuration_profile in json_data['configurationProfiles']:
-            del configuration_profile['id']
-            del configuration_profile['username']
-            del configuration_profile['lastInstalled']
-            del configuration_profile['profileIdentifier']
+    # Remove disk data
+    if 'storage' in json_data:
+        del json_data['storage']['bootDriveAvailableSpaceMegabytes']
+
+        index = 0
+        while index < len(json_data['storage']['disks']):
+            del json_data['storage']['disks'][index]['id']
+            del json_data['storage']['disks'][index]['revision']
+            del json_data['storage']['disks'][index]['partitions']
+            index += 1
+
+    # Remove user extension attributes
+    if 'userAndLocation' in json_data:
+        del json_data['userAndLocation']['extensionAttributes']
 
     return json_data
 
@@ -196,7 +250,7 @@ def get_name(json_data):
 
     try:
         name = json_data['userAndLocation']['email']
-    except:
+    except KeyError:
         name = json_data['udid']
 
     return name
