@@ -20,7 +20,6 @@ import logging
 import re
 from operator import itemgetter
 from pathlib import Path
-import pprint
 
 import modules_common
 
@@ -28,6 +27,11 @@ import modules_common
 WARNING:
 This module can be very noisy.  Use with caution and configure what data you with track.
 Consider limiting sections or applying heavy cleaning to the data
+
+With each Jamf version more (or less) data in the api tends to jitter (flip-flop).  After each upgrade you 
+will need to remove the items and reevaluate some times.   Items that flip flop I marked as Jitter
+
+To jamf: If you are reading this, consistency in reporting is appreciated and should be a requirement 
 """
 
 
@@ -63,17 +67,18 @@ def get(api_classic=None, api_universal=None, repo_path=None):
     while remainder > 0:
         """ Available sections
             Too many sections impacts performance and makes reports noisy
-            APPLICATIONS            LICENSED_SOFTWARE
-            ATTACHMENTS             LOCAL_USER_ACCOUNTS
-            CERTIFICATES            OPERATING_SYSTEM
-            CONFIGURATION_PROFILES  PLUGINS
-            CONTENT_CACHING         PRINTERS,HARDWARE
-            DISK_ENCRYPTION         PURCHASING
-            EXTENSION_ATTRIBUTES    SECURITY
-            FONTS                   SERVICES
-            GENERAL                 SOFTWARE_UPDATES
-            GROUP_MEMBERSHIPS       STORAGE
-            IBEACONS                USER_AND_LOCATION        
+            APPLICATIONS                   LICENSED_SOFTWARE
+            ATTACHMENTS                    LOCAL_USER_ACCOUNTS
+            CERTIFICATES                   OPERATING_SYSTEM
+            CONFIGURATION_PROFILES         PACKAGE_RECEIPTS
+            CONTENT_CACHING                PLUGINS
+            DISK_ENCRYPTION                PRINTERS
+            EXTENSION_ATTRIBUTES           PURCHASING
+            FONTS                          SECURITY
+            GENERAL                        SERVICES
+            GROUP_MEMBERSHIPS              SOFTWARE_UPDATES
+            HARDWARE                       STORAGE
+            IBEACONS                       USER_AND_LOCATION    
         """
         query_sections = [
             'GENERAL',
@@ -149,13 +154,24 @@ def clean_data(json_data):
         if json_data[key] is None:
             del json_data[key]
 
-    # Remove certificates data
+    # APPLICATIONS
+    if 'applications' in json_data:
+        for application in json_data['applications']:
+            del application['name']
+            del application['path']
+            del application['macAppStore']
+            del application['sizeMegabytes']
+            del application['updateAvailable']
+            del application['externalVersionId']
+
+    # CERTIFICATES
     if 'certificates' in json_data:
         index = 0
         while index < len(json_data['certificates']):
             del json_data['certificates'][index]['expirationDate']
             index += 1
 
+    # CONFIGURATION_PROFILES
     if 'configurationProfiles' in json_data:
         for configuration_profile in json_data['configurationProfiles']:
             del configuration_profile['id']
@@ -163,11 +179,20 @@ def clean_data(json_data):
             del configuration_profile['lastInstalled']
             del configuration_profile['profileIdentifier']
 
-    # Remove disk encryption attributes
+    # CONTENT_CACHING
+    if 'contentCaching' in json_data:
+        keeps = ('activated', 'active', 'cacheStatus', 'port', 'publicAddress')
+        keys = [item for item in json_data['contentCaching']]
+        for key in keys:
+            if key not in keeps:
+                del json_data['contentCaching'][key]
+
+    # DISK_ENCRYPTION
     if 'diskEncryption' in json_data:
         del json_data['diskEncryption']['bootPartitionEncryptionDetails']['partitionFileVault2Percent']
+        del json_data['diskEncryption']['individualRecoveryKeyValidityStatus']  # Jitters
 
-    # Remove fluctuating/changing/inconsequential general data
+    # GENERAL
     if 'general' in json_data:
         del json_data['general']['lastIpAddress']
         del json_data['general']['lastReportedIp']
@@ -181,16 +206,17 @@ def clean_data(json_data):
         del json_data['general']['extensionAttributes']
         del json_data['general']['lastCloudBackupDate']
 
-    # Remove hardware extension attributes
+    # HARDWARE
     if 'hardware' in json_data:
         del json_data['hardware']['extensionAttributes']
         del json_data['hardware']['batteryCapacityPercent']
         del json_data['hardware']['smcVersion']
         del json_data['hardware']['bootRom']
 
-    # Remove system users
+    # LOCAL_USER_ACCOUNTS
     if 'localUserAccounts' in json_data:
         index = 0
+        # Remove system users
         while index < len(json_data['localUserAccounts']):
             if int(json_data['localUserAccounts'][index]['uid']) < 500:
                 del json_data['localUserAccounts'][index]
@@ -198,32 +224,36 @@ def clean_data(json_data):
                 # Remove user directory sizes
                 del json_data['localUserAccounts'][index]['homeDirectorySizeMb']
                 # Remove user type, Jamf tends to flip flop on these values
-                del json_data['localUserAccounts'][index]['userAccountType']
+                del json_data['localUserAccounts'][index]['userAccountType']  # Jitters
                 index += 1
 
         # Sort users by uid
         json_data['localUserAccounts'] = sorted(json_data['localUserAccounts'], key=itemgetter('uid'))
 
-    # Remove OS extension attributes
+    # OPERATING_SYSTEM
     if 'operatingSystem' in json_data:
         del json_data['operatingSystem']['extensionAttributes']
         del json_data['operatingSystem']['softwareUpdateDeviceId']
-        del json_data['operatingSystem']['fileVault2Status']
+        del json_data['operatingSystem']['fileVault2Status']  # Jitters
 
-        # If you don't want to be notified of every version change on a system, uncomment
+        # Use version 1 for Major, 2 for Minor and 3 for all (or uncomment)
         version = json_data['operatingSystem']['version'].split('.')
-        json_data['operatingSystem']['version'] = '.'.join(version[:2])
+        json_data['operatingSystem']['version'] = '.'.join(version[:1])
         del json_data['operatingSystem']['build']
 
-    # Remove purchasing extension attributes
+    # PURCHASING
     if 'purchasing' in json_data:
         del json_data['purchasing']['extensionAttributes']
 
-    # Remove security data
+    # SECURITY
     if 'security' in json_data:
         del json_data['security']['xprotectVersion']
 
-    # Remove disk data
+    # SERVICES
+    if 'services' in json_data:
+        pass
+
+    # STORAGE
     if 'storage' in json_data:
         del json_data['storage']['bootDriveAvailableSpaceMegabytes']
 
@@ -234,7 +264,7 @@ def clean_data(json_data):
             del json_data['storage']['disks'][index]['partitions']
             index += 1
 
-    # Remove user extension attributes
+    # USER_AND_LOCATION
     if 'userAndLocation' in json_data:
         del json_data['userAndLocation']['extensionAttributes']
 
