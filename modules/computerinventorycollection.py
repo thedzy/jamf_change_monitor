@@ -49,7 +49,7 @@ def get(api_classic=None, api_universal=None, repo_path=None):
         module_path.mkdir(exist_ok=True)
 
     # Query api
-    api_query = api_classic.get_data('computerinventorycollection')
+    api_query = api_universal.get_data('v1', 'computer-inventory-collection-settings')
     logging.debug(f'Query: {api_query.data}')
 
     if api_query.success:
