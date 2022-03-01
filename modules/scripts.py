@@ -52,11 +52,11 @@ def get(api_classic=None, api_universal=None, repo_path=None):
 
     # Query api
     scripts = []
-    remainder, page, size = 1, 0, 100
-    while remainder > 0:
+    remainder, page, size = True, 0, 100
+    while remainder:
         api_query = api_universal.get_data('v1', 'scripts', page=page, size=size, sort='id:desc')
         logging.debug(f'Query {api_query.data}')
-        remainder = (api_query.data['totalCount'] / size) - page
+        remainder = ((page + 1) * size) < api_query.data['totalCount']
         scripts.extend(api_query.data['results'])
         page += 1
 
