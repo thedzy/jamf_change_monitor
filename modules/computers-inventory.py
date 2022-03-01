@@ -20,6 +20,7 @@ import logging
 import re
 from operator import itemgetter
 from pathlib import Path
+import pprint
 
 import modules_common
 
@@ -63,8 +64,8 @@ def get(api_classic=None, api_universal=None, repo_path=None):
 
     # Query api
     data_objects = []
-    remainder, page, size = 1, 0, 200
-    while remainder > 0:
+    remainder, page, size = True, 0, 100
+    while remainder:
         """ Available sections
             Too many sections impacts performance and makes reports noisy
             APPLICATIONS                   LICENSED_SOFTWARE
@@ -91,7 +92,7 @@ def get(api_classic=None, api_universal=None, repo_path=None):
         api_query = api_universal.get_data('v1', 'computers-inventory', section=query_sections, page=page, size=size,
                                            sort='id:desc')
         logging.debug(f'Query {api_query.data}')
-        remainder = (api_query.data['totalCount'] / size) - page
+        remainder = ((page + 1) * size) < api_query.data['totalCount']
         data_objects.extend(api_query.data['results'])
         page += 1
 
